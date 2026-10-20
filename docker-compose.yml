@@ -1,0 +1,32 @@
+services:
+  mongo:
+    # MongoDB 7: o 8.x se recusa a iniciar em kernels Linux 6.19+ (ex.: Linux Mint 22 / Ubuntu 24.04
+    # com kernel 7.0). Veja https://jira.mongodb.org/browse/SERVER-125742
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./servidor/mongo-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  servidor:
+    build: ./servidor
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: 8080
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017}
+      MONGODB_DB: ${MONGODB_DB:-easyagenda}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
