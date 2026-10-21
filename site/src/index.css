@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+/* Cores do EasyAgenda */
+@theme {
+  --color-fundo: #f6f6f7;
+  --color-texto: #18181b;
+  --color-cinza: #6b6b73;
+  --color-borda: #e4e4e7;
+}
+
+body {
+  @apply bg-fundo text-texto antialiased;
+  font-family: system-ui, sans-serif;
+}
