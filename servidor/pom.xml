@@ -15,11 +15,23 @@
     </properties>
 
     <dependencies>
-        <!-- Driver oficial do MongoDB -->
+        <!-- Driver oficial do MongoDB (traz junto o BSON, que usamos para ler/escrever JSON) -->
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
             <version>5.2.1</version>
+        </dependency>
+        <!-- Hash de senha -->
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+        <!-- Token JWT -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.4.0</version>
         </dependency>
         <!-- Testes -->
         <dependency>
