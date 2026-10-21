@@ -6,9 +6,29 @@
   --color-texto: #18181b;
   --color-cinza: #6b6b73;
   --color-borda: #e4e4e7;
+  --color-erro: #d6403a;
 }
 
 body {
   @apply bg-fundo text-texto antialiased;
   font-family: system-ui, sans-serif;
+}
+
+/* Classes reaproveitadas nas telas */
+@layer components {
+  .card {
+    @apply rounded-xl border border-borda bg-white p-6;
+  }
+
+  .btn {
+    @apply w-full rounded-lg bg-texto px-4 py-2.5 text-sm font-semibold text-white hover:bg-zinc-700 disabled:opacity-60;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-borda bg-white px-3 py-2.5 outline-none focus:border-texto focus:ring-2 focus:ring-zinc-200;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium;
+  }
 }
