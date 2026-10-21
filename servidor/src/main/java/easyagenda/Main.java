@@ -1,5 +1,7 @@
 package easyagenda;
 
+import easyagenda.auth.Usuarios;
+
 /**
  * Ponto de entrada: conecta no MongoDB e sobe o servidor HTTP.
  */
@@ -11,6 +13,7 @@ public class Main {
         String dbName = env("MONGODB_DB", "easyagenda");
 
         Database.connect(mongoUri, dbName);
+        Usuarios.garantirIndices();
 
         Server server = new Server(port);
         server.start();
