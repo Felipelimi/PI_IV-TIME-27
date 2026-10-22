@@ -6,12 +6,15 @@ import com.sun.net.httpserver.HttpServer;
 import easyagenda.auth.Auth;
 import easyagenda.auth.AuthRoutes;
 import easyagenda.auth.Usuarios;
+import easyagenda.horarios.HorarioRoutes;
 import org.bson.Document;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Servidor HTTP usando o HttpServer que já vem no JDK (sem framework).
@@ -22,6 +25,9 @@ import java.nio.charset.StandardCharsets;
 public class Server {
 
     private final HttpServer httpServer;
+
+    // Para cada caminho, qual handler atende cada método (GET, POST, PUT, DELETE)
+    private final Map<String, Map<String, HttpHandler>> rotas = new HashMap<>();
 
     public Server(int port) throws IOException {
         this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
@@ -50,28 +56,47 @@ public class Server {
 
         rotaProtegida("/aluno/aulas", Usuarios.ALUNO, "GET", exchange ->
                 Json.enviar(exchange, 200, new Document("mensagem", "área do aluno")));
+
+        // Horários do professor (tarefa 2.2)
+        rotaProtegida("/horarios", Usuarios.PROFESSOR, "GET", HorarioRoutes::listarMeus);
+        rotaProtegida("/horarios", Usuarios.PROFESSOR, "POST", HorarioRoutes::criar);
+        rotaProtegida("/horarios", Usuarios.PROFESSOR, "PUT", HorarioRoutes::mudarModalidade);
+        rotaProtegida("/horarios", Usuarios.PROFESSOR, "DELETE", HorarioRoutes::remover);
+
+        // Rota aberta: o "link" do professor, com os horários livres para o aluno
+        rota("/professores", "GET", HorarioRoutes::listarDoProfessor);
     }
 
-    /** Rota aberta: confere o método, trata erro inesperado e fecha a conexão. */
+    /**
+     * Rota aberta. O mesmo caminho pode ter um handler para cada método
+     * (ex.: GET e POST em /horarios). Trata erro inesperado e fecha a conexão.
+     */
     private void rota(String caminho, String metodo, HttpHandler handler) {
-        httpServer.createContext(caminho, exchange -> {
-            try {
-                if (!metodo.equals(exchange.getRequestMethod())) {
-                    Json.erro(exchange, 405, "método não permitido");
-                    return;
-                }
-                handler.handle(exchange);
-            } catch (Exception e) {
-                e.printStackTrace();
-                try {
-                    Json.erro(exchange, 500, "erro interno no servidor");
-                } catch (IOException ignorado) {
-                    // resposta já começou a ser enviada
-                }
-            } finally {
-                exchange.close();
+        if (!rotas.containsKey(caminho)) {
+            rotas.put(caminho, new HashMap<>());
+            httpServer.createContext(caminho, exchange -> atender(caminho, exchange));
+        }
+        rotas.get(caminho).put(metodo, handler);
+    }
+
+    private void atender(String caminho, HttpExchange exchange) throws IOException {
+        try {
+            HttpHandler handler = rotas.get(caminho).get(exchange.getRequestMethod());
+            if (handler == null) {
+                Json.erro(exchange, 405, "método não permitido");
+                return;
             }
-        });
+            handler.handle(exchange);
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                Json.erro(exchange, 500, "erro interno no servidor");
+            } catch (IOException ignorado) {
+                // resposta já começou a ser enviada
+            }
+        } finally {
+            exchange.close();
+        }
     }
 
     /**
