@@ -39,4 +39,11 @@ export const api = {
   cadastrar: (nome, email, senha, tipo) => chamar("POST", "/cadastro", { nome, email, senha, tipo }),
   entrar: (email, senha) => chamar("POST", "/login", { email, senha }),
   eu: () => chamar("GET", "/me"),
+
+  // Horários do professor (tarefa 2.2)
+  meusHorarios: (de, ate) => chamar("GET", `/horarios?de=${de}&ate=${ate}`),
+  criarHorario: (dia, horaInicio, horaFim, modalidade) => chamar("POST", "/horarios", { dia, horaInicio, horaFim, modalidade }),
+  mudarModalidade: (id, modalidade) => chamar("PUT", `/horarios/${id}`, { modalidade }),
+  removerHorario: (id) => chamar("DELETE", `/horarios/${id}`),
+  horariosDoProfessor: (professorId) => chamar("GET", `/professores/${professorId}/horarios`),
 };
