@@ -26,6 +26,8 @@ export default function App() {
       <Route path="/cadastro" element={<Cadastro />} />
 
       <Route path="/horarios" element={<RotaProtegida tipo="professor"><ComMenu><Horarios /></ComMenu></RotaProtegida>} />
+      {/* O id do professor identifica a agenda aberta pelo aluno. */}
+      <Route path="/agendamento/:professorId" element={<RotaProtegida tipo="aluno"><ComMenu><Agendamento /></ComMenu></RotaProtegida>} />
       <Route path="/agendamento" element={<RotaProtegida tipo="aluno"><ComMenu><Agendamento /></ComMenu></RotaProtegida>} />
       <Route path="/proximas-aulas" element={<RotaProtegida><ComMenu><ProximasAulas /></ComMenu></RotaProtegida>} />
       <Route path="/historico" element={<RotaProtegida><ComMenu><Historico /></ComMenu></RotaProtegida>} />

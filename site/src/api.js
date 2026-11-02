@@ -45,5 +45,8 @@ export const api = {
   criarHorario: (dia, horaInicio, horaFim, modalidade) => chamar("POST", "/horarios", { dia, horaInicio, horaFim, modalidade }),
   mudarModalidade: (id, modalidade) => chamar("PUT", `/horarios/${id}`, { modalidade }),
   removerHorario: (id) => chamar("DELETE", `/horarios/${id}`),
-  horariosDoProfessor: (professorId) => chamar("GET", `/professores/${professorId}/horarios`),
+  // Horários públicos do professor e confirmação da aula (tarefa 3.2).
+  horariosDoProfessor: (professorId, de, ate) => chamar("GET", `/professores/${professorId}/horarios?de=${de}&ate=${ate}`),
+  // Rota usada quando a tarefa 3.1 disponibilizar o agendamento no servidor.
+  agendarHorario: (horarioId) => chamar("POST", "/aulas", { horarioId }),
 };
