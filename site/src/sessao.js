@@ -24,3 +24,11 @@ export function sair() {
 export function paginaInicial(usuario) {
   return usuario?.tipo === "professor" ? "/horarios" : "/agendamento";
 }
+
+// Preserva o link do professor quando o aluno precisa entrar ou criar sua conta.
+export function paginaAposLogin(usuario, voltarPara) {
+  if (usuario?.tipo === "aluno" && voltarPara?.startsWith("/agendamento/")) {
+    return voltarPara;
+  }
+  return paginaInicial(usuario);
+}
