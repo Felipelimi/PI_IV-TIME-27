@@ -155,13 +155,18 @@ Variáveis de ambiente (todas opcionais):
 
 ## Testes
 
+Os testes de horários e de agendamento usam o MongoDB local (no banco separado `easyagenda_test`,
+que é apagado a cada execução). Suba o banco antes:
+
 ```bash
+docker compose up -d mongo
 cd servidor
 mvn test
 ```
 
-Os testes não precisam de banco. O teste modelo é
-[PingTest.java](servidor/src/test/java/easyagenda/PingTest.java): copie-o para criar novos testes.
+O teste modelo é [PingTest.java](servidor/src/test/java/easyagenda/PingTest.java): copie-o para
+criar novos testes. O nome da classe precisa terminar em `Test` (ex.: `AulaTest`), senão o Maven
+não a executa.
 
 ## Problemas comuns
 
