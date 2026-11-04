@@ -25,7 +25,7 @@ import easyagenda.Server;
  * Precisa do Mongo no ar: docker compose up -d mongo
  * Os testes usam o banco "easyagenda_test", que é limpo antes e depois.
  */
-class Authtest {
+class AuthTest {
 
     private static final String BANCO_DE_TESTE = "easyagenda_test";
 
