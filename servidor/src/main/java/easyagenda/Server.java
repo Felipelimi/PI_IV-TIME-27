@@ -72,6 +72,10 @@ public class Server {
 
         // Agendamento de aula pelo aluno (tarefa 3.1)
         rotaProtegida("/aulas", Usuarios.ALUNO, "POST", AulaRoutes::agendar);
+
+        // Próximas aulas e histórico do usuário logado, professor ou aluno (tarefa 4.3)
+        rotaProtegida("/aulas/proximas", null, "GET", AulaRoutes::listarProximas);
+        rotaProtegida("/aulas/historico", null, "GET", AulaRoutes::listarHistorico);
     }
 
     /**
