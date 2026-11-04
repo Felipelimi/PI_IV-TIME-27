@@ -1,5 +1,6 @@
 package easyagenda;
 
+import easyagenda.aulas.Aulas;
 import easyagenda.auth.Usuarios;
 
 /**
@@ -14,6 +15,7 @@ public class Main {
 
         Database.connect(mongoUri, dbName);
         Usuarios.garantirIndices();
+        Aulas.garantirIndices();
 
         Server server = new Server(port);
         server.start();

@@ -3,6 +3,7 @@ package easyagenda;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import easyagenda.aulas.AulaRoutes;
 import easyagenda.auth.Auth;
 import easyagenda.auth.AuthRoutes;
 import easyagenda.auth.Usuarios;
@@ -15,6 +16,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 /**
  * Servidor HTTP usando o HttpServer que já vem no JDK (sem framework).
@@ -31,6 +33,8 @@ public class Server {
 
     public Server(int port) throws IOException {
         this.httpServer = HttpServer.create(new InetSocketAddress(port), 0);
+        // Uma thread (virtual) por requisição: sem isso o HttpServer atende uma de cada vez
+        httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         registerRoutes();
     }
 
@@ -65,6 +69,9 @@ public class Server {
 
         // Rota aberta: o "link" do professor, com os horários livres para o aluno
         rota("/professores", "GET", HorarioRoutes::listarDoProfessor);
+
+        // Agendamento de aula pelo aluno (tarefa 3.1)
+        rotaProtegida("/aulas", Usuarios.ALUNO, "POST", AulaRoutes::agendar);
     }
 
     /**
