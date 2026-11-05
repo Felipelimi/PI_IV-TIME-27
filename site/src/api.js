@@ -47,6 +47,6 @@ export const api = {
   removerHorario: (id) => chamar("DELETE", `/horarios/${id}`),
   // Horários públicos do professor e confirmação da aula (tarefa 3.2).
   horariosDoProfessor: (professorId, de, ate) => chamar("GET", `/professores/${professorId}/horarios?de=${de}&ate=${ate}`),
-  // Rota usada quando a tarefa 3.1 disponibilizar o agendamento no servidor.
+  // O servidor reserva o horário e responde 409 se outro aluno confirmou antes.
   agendarHorario: (horarioId) => chamar("POST", "/aulas", { horarioId }),
 };
