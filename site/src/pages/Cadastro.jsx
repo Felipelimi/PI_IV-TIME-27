@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
-import { paginaInicial, salvarSessao } from "../sessao.js";
+import { paginaAposLogin, salvarSessao } from "../sessao.js";
 
 export default function Cadastro() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ nome: "", email: "", senha: "", tipo: "professor" });
+  const location = useLocation();
+  const tipoInicial = location.state?.voltarPara?.startsWith("/agendamento/") ? "aluno" : "professor";
+  const [form, setForm] = useState({ nome: "", email: "", senha: "", tipo: tipoInicial });
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
@@ -32,7 +34,7 @@ export default function Cadastro() {
       // Depois de criar a conta, já entra direto
       const resposta = await api.entrar(form.email, form.senha);
       salvarSessao(resposta.token, resposta.usuario);
-      navigate(paginaInicial(resposta.usuario));
+      navigate(paginaAposLogin(resposta.usuario, location.state?.voltarPara), { replace: true });
     } catch (err) {
       setErro(err.message);
     } finally {
@@ -88,7 +90,7 @@ export default function Cadastro() {
         </form>
 
         <p className="mt-6 text-center text-sm text-cinza">
-          Já tem conta? <Link to="/login" className="font-semibold text-texto underline">Entrar</Link>
+          Já tem conta? <Link to="/login" state={location.state} className="font-semibold text-texto underline">Entrar</Link>
         </p>
       </div>
     </div>

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
-import { paginaInicial, pegarUsuario, salvarSessao } from "../sessao.js";
+import { paginaAposLogin, pegarUsuario, salvarSessao } from "../sessao.js";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
@@ -13,7 +14,7 @@ export default function Login() {
   // Quem já está logado vai direto para a sua página
   const logado = pegarUsuario();
   if (logado) {
-    return <Navigate to={paginaInicial(logado)} replace />;
+    return <Navigate to={paginaAposLogin(logado, location.state?.voltarPara)} replace />;
   }
 
   async function handleSubmit(e) {
@@ -29,7 +30,7 @@ export default function Login() {
     try {
       const resposta = await api.entrar(email, senha);
       salvarSessao(resposta.token, resposta.usuario);
-      navigate(paginaInicial(resposta.usuario));
+      navigate(paginaAposLogin(resposta.usuario, location.state?.voltarPara), { replace: true });
     } catch (err) {
       setErro(err.message);
     } finally {
@@ -62,7 +63,7 @@ export default function Login() {
         </form>
 
         <p className="mt-6 text-center text-sm text-cinza">
-          Não tem conta? <Link to="/cadastro" className="font-semibold text-texto underline">Criar conta</Link>
+          Não tem conta? <Link to="/cadastro" state={location.state} className="font-semibold text-texto underline">Criar conta</Link>
         </p>
       </div>
     </div>
