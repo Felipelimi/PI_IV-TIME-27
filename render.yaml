@@ -1,0 +1,32 @@
+# Blueprint do Render: versão de teste do servidor (tarefa 2.4).
+# No painel do Render: New > Blueprint e escolha este repositório.
+services:
+  - type: web
+    name: easyagenda-servidor
+    runtime: docker
+    plan: free
+    region: virginia
+    branch: main # todo push na main faz um novo deploy
+    dockerfilePath: ./servidor/Dockerfile
+    dockerContext: ./servidor
+    healthCheckPath: /ping
+    # A porta vem na variável PORT, que o Render define sozinho
+    envVars:
+      # Connection string do Atlas: preencha no painel
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: easyagenda
+      # Chave dos tokens de login, gerada pelo Render
+      - key: JWT_SECRET
+        generateValue: true
+      # O plano grátis tem 512 MB de memória
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=75
+      # SMTP dos lembretes: vazio = e-mails só no log
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USUARIO
+        sync: false
+      - key: SMTP_SENHA
+        sync: false
