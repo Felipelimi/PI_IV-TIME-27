@@ -46,7 +46,9 @@ db.createCollection("aulas", {
         alunoId: { bsonType: "objectId" },
         dataHora: { bsonType: "date" },
         status: { enum: ["agendada", "realizada", "cancelada"] },
-        modalidade: { enum: ["presencial", "online"] }
+        modalidade: { enum: ["presencial", "online"] },
+        lembreteEnviado: { bsonType: "bool", description: "true depois que o lembrete por e-mail saiu" },
+        lembreteEnviadoEm: { bsonType: "date" }
       }
     }
   }
