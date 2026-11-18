@@ -178,6 +178,60 @@ do servidor (`docker compose logs -f servidor`). Para enviar de verdade, configu
 > Nunca coloque a senha do SMTP no código nem no git: use o arquivo `.env` (que já está no
 > `.gitignore`) ou variáveis de ambiente.
 
+## Versão de teste no ar (tarefa 2.4)
+
+| Parte    | Onde fica                                                  | Custo  |
+|----------|------------------------------------------------------------|--------|
+| Banco    | MongoDB Atlas (cluster M0)                                 | Grátis |
+| Servidor | Render (Docker, configurado pelo [render.yaml](render.yaml)) | Grátis |
+| Site     | Vercel (pasta [site/](site/))                              | Grátis |
+
+### 1. Banco no MongoDB Atlas
+
+1. Crie um cluster **M0** (grátis), na região `us-east-1` ou `sa-east-1`.
+2. Em **Database Access**, crie um usuário com senha.
+3. Em **Network Access**, libere `0.0.0.0/0` (o Render não tem IP fixo).
+4. Crie as coleções e índices (pule se o Atlas do time já tiver):
+
+   ```bash
+   mongosh "<URI>" servidor/mongo-init/init.js
+   ```
+
+5. Em **Connect > Drivers**, copie a connection string (com usuário e senha). Ela é o
+   `MONGODB_URI`.
+
+### 2. Servidor no Render
+
+1. No painel do Render: **New > Blueprint** e escolha este repositório. Ele lê o
+   [render.yaml](render.yaml).
+2. Preencha o `MONGODB_URI` com a connection string do Atlas (o SMTP é opcional; vazio, os
+   lembretes saem só no log).
+3. Depois do deploy, confira https://SEU-SERVICO.onrender.com/ping: a resposta deve ser `ok`.
+
+Todo push na `main` faz um novo deploy.
+
+> **O plano grátis adormece o servidor depois de 15 min sem acesso.** O primeiro acesso depois
+> disso demora cerca de 1 min, e a rotina de lembretes fica parada enquanto ele dorme. O workflow
+> [manter-servidor-acordado.yml](.github/workflows/manter-servidor-acordado.yml) chama o `/ping`
+> a cada 10 min: para ligá-lo, crie a variável `SERVIDOR_URL` (o endereço do Render, sem `/` no
+> fim) em **Settings > Secrets and variables > Actions > Variables** do GitHub.
+
+### 3. Site na Vercel
+
+1. No painel da Vercel: **Add New > Project** e escolha este repositório.
+2. Em **Root Directory**, coloque `site`.
+3. Em **Environment Variables**, crie `VITE_API_URL` com o endereço do Render, sem `/` no fim
+   (ex.: `https://easyagenda-servidor.onrender.com`).
+4. Clique em **Deploy**.
+
+Se mudar o `VITE_API_URL` depois, faça um **Redeploy**: a variável entra no build do site.
+
+### 4. Conferindo
+
+No endereço da Vercel, cadastre um professor, crie um horário, abra o link do professor,
+cadastre um aluno e agende a aula. Se der erro, veja os logs do serviço no Render e confira se o
+`VITE_API_URL` está certo.
+
 ## Testes
 
 Os testes de horários e de agendamento usam o MongoDB local (no banco separado `easyagenda_test`,
