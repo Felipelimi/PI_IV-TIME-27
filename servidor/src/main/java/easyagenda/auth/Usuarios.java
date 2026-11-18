@@ -1,6 +1,7 @@
 package easyagenda.auth;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
@@ -37,6 +38,11 @@ public final class Usuarios {
 
     public static Document buscarPorEmail(String email) {
         return colecao().find(Filters.eq("email", email)).first();
+    }
+
+    /** Usuário pelo id, ou null se não existir. */
+    public static Document buscarPorId(ObjectId id) {
+        return colecao().find(Filters.eq("_id", id)).first();
     }
 
     /** Insere o usuário e devolve o documento salvo (já com o _id preenchido). */

@@ -21,6 +21,7 @@ servidor/
     Main.java               # ponto de entrada: conecta no banco e sobe o servidor
     Database.java           # conexão com o MongoDB
     Server.java             # servidor HTTP e rotas
+    lembretes/              # lembrete por e-mail das aulas (rotina automática + envio SMTP)
   src/test/java/easyagenda/
     PingTest.java           # teste modelo
 ```
@@ -152,6 +153,30 @@ Variáveis de ambiente (todas opcionais):
 
 - **Opção 1 (Docker):** coloque as variáveis no arquivo `.env` da raiz.
 - **Opção 2 (sem Docker):** defina-as no terminal (`export` / `$env:`).
+
+### Lembrete por e-mail (tarefa 3.3)
+
+O servidor confere a cada 10 minutos as aulas agendadas que começam nas próximas 24 horas e
+manda um e-mail para o aluno e outro para o professor. A aula fica marcada com
+`lembreteEnviado: true`, então cada aula recebe um único lembrete. O código está em
+[servidor/src/main/java/easyagenda/lembretes/](servidor/src/main/java/easyagenda/lembretes/).
+
+**Sem configurar nada, nenhum e-mail sai de verdade:** o texto de cada lembrete aparece no log
+do servidor (`docker compose logs -f servidor`). Para enviar de verdade, configure um SMTP:
+
+| Variável                      | Padrão                 | Para que serve                                  |
+|-------------------------------|------------------------|-------------------------------------------------|
+| `SMTP_HOST`                   | (vazio = só no log)    | Servidor SMTP, ex.: `smtp.gmail.com`            |
+| `SMTP_PORT`                   | `587`                  | Porta do SMTP                                   |
+| `SMTP_USUARIO`                | (vazio)                | Usuário do SMTP (normalmente o e-mail)          |
+| `SMTP_SENHA`                  | (vazio)                | Senha do SMTP (no Gmail, uma "senha de app")    |
+| `SMTP_REMETENTE`              | o `SMTP_USUARIO`       | Endereço que aparece como remetente             |
+| `SMTP_TLS`                    | `true`                 | Usa STARTTLS                                    |
+| `LEMBRETE_ANTECEDENCIA_HORAS` | `24`                   | Com quanto tempo de antecedência o lembrete sai |
+| `LEMBRETE_INTERVALO_MINUTOS`  | `10`                   | De quanto em quanto tempo a rotina roda         |
+
+> Nunca coloque a senha do SMTP no código nem no git: use o arquivo `.env` (que já está no
+> `.gitignore`) ou variáveis de ambiente.
 
 ## Testes
 
