@@ -92,6 +92,19 @@ public class Server {
 
     private void atender(String caminho, HttpExchange exchange) throws IOException {
         try {
+            // CORS: o site (Vercel) chama o servidor (Render) de outro endereço.
+            // "*" é seguro aqui porque o login vai no header Authorization, não em cookie.
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+
+            // Pré-requisição (preflight) que o navegador manda antes de POST/PUT/DELETE
+            if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
             HttpHandler handler = rotas.get(caminho).get(exchange.getRequestMethod());
             if (handler == null) {
                 Json.erro(exchange, 405, "método não permitido");
