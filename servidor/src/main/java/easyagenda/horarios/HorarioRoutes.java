@@ -148,7 +148,8 @@ public final class HorarioRoutes {
 
     /**
      * GET /professores/{id}/horarios?de=&ate=  (rota aberta: é o link do professor)
-     * Devolve o nome do professor e só os horários livres que ainda não passaram.
+     * Devolve o nome do professor, o prazo dele para cancelar (em horas) e só
+     * os horários livres que ainda não passaram.
      */
     public static void listarDoProfessor(HttpExchange exchange) throws IOException {
         // caminho esperado: /professores/{id}/horarios
@@ -186,7 +187,9 @@ public final class HorarioRoutes {
             }
         }
         Json.enviar(exchange, 200, new Document()
-                .append("professor", new Document("id", professorId.toHexString()).append("nome", professor.getString("nome")))
+                .append("professor", new Document("id", professorId.toHexString())
+                        .append("nome", professor.getString("nome"))
+                        .append("prazoCancelamentoHoras", Usuarios.prazoCancelamentoHoras(professorId)))
                 .append("horarios", livres));
     }
 
