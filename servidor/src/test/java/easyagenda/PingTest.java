@@ -10,6 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Teste modelo: copie esta classe para criar os próximos testes.
@@ -41,5 +42,22 @@ class PingTest {
 
         assertEquals(200, response.statusCode());
         assertEquals("ok", response.body());
+        assertEquals("*", response.headers().firstValue("Access-Control-Allow-Origin").orElse(null));
+    }
+
+    @Test
+    void preflightDoNavegadorEhLiberado() throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + server.getPort() + "/login"))
+                .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+                .header("Origin", "https://easyagenda.vercel.app")
+                .header("Access-Control-Request-Method", "POST")
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertEquals(204, response.statusCode());
+        assertEquals("*", response.headers().firstValue("Access-Control-Allow-Origin").orElse(null));
+        assertTrue(response.headers().firstValue("Access-Control-Allow-Headers").orElse("").contains("Authorization"));
     }
 }
