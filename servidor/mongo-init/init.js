@@ -13,7 +13,8 @@ db.createCollection("usuarios", {
         nome: { bsonType: "string" },
         email: { bsonType: "string" },
         senha: { bsonType: "string", description: "guardar o hash, nunca a senha pura" },
-        tipo: { enum: ["professor", "aluno"] }
+        tipo: { enum: ["professor", "aluno"] },
+        prazoCancelamentoHoras: { bsonType: "int", minimum: 0, maximum: 720, description: "só professor; sem o campo, vale 24" }
       }
     }
   }
@@ -48,7 +49,8 @@ db.createCollection("aulas", {
         status: { enum: ["agendada", "realizada", "cancelada"] },
         modalidade: { enum: ["presencial", "online"] },
         lembreteEnviado: { bsonType: "bool", description: "true depois que o lembrete por e-mail saiu" },
-        lembreteEnviadoEm: { bsonType: "date" }
+        lembreteEnviadoEm: { bsonType: "date" },
+        canceladaEm: { bsonType: "date" }
       }
     }
   }

@@ -7,6 +7,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.Updates;
 
 import easyagenda.Database;
 
@@ -17,6 +18,9 @@ public final class Usuarios {
 
     public static final String PROFESSOR = "professor";
     public static final String ALUNO = "aluno";
+
+    /** Prazo mínimo para o aluno cancelar ou remarcar, quando o professor não definiu outro (tarefa 4.1). */
+    public static final int PRAZO_CANCELAMENTO_PADRAO_HORAS = 24;
 
     private Usuarios() {
     }
@@ -43,6 +47,20 @@ public final class Usuarios {
     /** Usuário pelo id, ou null se não existir. */
     public static Document buscarPorId(ObjectId id) {
         return colecao().find(Filters.eq("_id", id)).first();
+    }
+
+    /**
+     * Com quantas horas de antecedência, no mínimo, o aluno pode cancelar ou
+     * remarcar uma aula desse professor.
+     */
+    public static int prazoCancelamentoHoras(ObjectId professorId) {
+        Document professor = buscarPorId(professorId);
+        Object prazo = professor == null ? null : professor.get("prazoCancelamentoHoras");
+        return prazo instanceof Number n ? n.intValue() : PRAZO_CANCELAMENTO_PADRAO_HORAS;
+    }
+
+    public static void definirPrazoCancelamento(ObjectId professorId, int horas) {
+        colecao().updateOne(Filters.eq("_id", professorId), Updates.set("prazoCancelamentoHoras", horas));
     }
 
     /** Insere o usuário e devolve o documento salvo (já com o _id preenchido). */

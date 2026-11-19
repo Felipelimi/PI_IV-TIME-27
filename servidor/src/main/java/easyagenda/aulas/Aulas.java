@@ -14,6 +14,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.Updates;
 
 import easyagenda.Database;
 import easyagenda.auth.Auth;
@@ -63,6 +64,27 @@ public final class Aulas {
                 .append("modalidade", horario.getString("modalidade"));
         colecao().insertOne(aula);
         return aula;
+    }
+
+    public static Document buscarPorId(ObjectId id) {
+        return colecao().find(Filters.eq("_id", id)).first();
+    }
+
+    /**
+     * Cancela a aula se ela ainda estiver agendada. Devolve false se outra
+     * requisição já tinha cancelado (ou a aula não estava mais agendada).
+     * Cancelada, a aula sai do índice único e o horário volta a ficar livre.
+     */
+    public static boolean cancelar(ObjectId aulaId) {
+        return colecao().updateOne(
+                Filters.and(Filters.eq("_id", aulaId), Filters.eq("status", AGENDADA)),
+                Updates.combine(Updates.set("status", CANCELADA), Updates.set("canceladaEm", new Date())))
+                .getModifiedCount() == 1;
+    }
+
+    /** Desfaz uma aula recém-criada (usado quando a remarcação não pode terminar). */
+    public static void apagar(ObjectId aulaId) {
+        colecao().deleteOne(Filters.eq("_id", aulaId));
     }
 
     /** Aulas agendadas que ainda não começaram, da mais próxima para a mais distante. */

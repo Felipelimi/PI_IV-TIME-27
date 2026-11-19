@@ -70,8 +70,13 @@ public class Server {
         // Rota aberta: o "link" do professor, com os horários livres para o aluno
         rota("/professores", "GET", HorarioRoutes::listarDoProfessor);
 
-        // Agendamento de aula pelo aluno (tarefa 3.1)
-        rotaProtegida("/aulas", Usuarios.ALUNO, "POST", AulaRoutes::agendar);
+        // Aluno agenda (tarefa 3.1), cancela e remarca (tarefa 4.1):
+        // POST /aulas, /aulas/{id}/cancelar e /aulas/{id}/remarcar
+        rotaProtegida("/aulas", Usuarios.ALUNO, "POST", AulaRoutes::postar);
+
+        // Prazo mínimo para o aluno cancelar ou remarcar, definido pelo professor (tarefa 4.1)
+        rotaProtegida("/professor/prazo-cancelamento", Usuarios.PROFESSOR, "GET", AulaRoutes::verPrazo);
+        rotaProtegida("/professor/prazo-cancelamento", Usuarios.PROFESSOR, "PUT", AulaRoutes::mudarPrazo);
 
         // Próximas aulas e histórico do usuário logado, professor ou aluno (tarefa 4.3)
         rotaProtegida("/aulas/proximas", null, "GET", AulaRoutes::listarProximas);
