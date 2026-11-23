@@ -48,5 +48,9 @@ export const api = {
   // Horários públicos do professor e confirmação da aula (tarefa 3.2).
   horariosDoProfessor: (professorId, de, ate) => chamar("GET", `/professores/${professorId}/horarios?de=${de}&ate=${ate}`),
   // O servidor reserva o horário e responde 409 se outro aluno confirmou antes.
+  proximasAulas: () => chamar("GET", "/aulas/proximas"),
+  historicoAulas: () => chamar("GET", "/aulas/historico"),
+  cancelarAula: (id) => chamar("POST", `/aulas/${id}/cancelar`),
+  remarcarAula: (id, horarioId) => chamar("POST", `/aulas/${id}/remarcar`, { horarioId }),
   agendarHorario: (horarioId) => chamar("POST", "/aulas", { horarioId }),
 };
