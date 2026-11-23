@@ -1,3 +1,4 @@
+import ListaAulas from "../components/ListaAulas.jsx";
 export default function Historico() {
-  return <h1 className="text-2xl font-bold">Histórico</h1>;
+  return <ListaAulas historico />;
 }

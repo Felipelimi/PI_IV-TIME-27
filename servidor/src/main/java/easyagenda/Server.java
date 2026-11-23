@@ -70,9 +70,9 @@ public class Server {
         // Rota aberta: o "link" do professor, com os horários livres para o aluno
         rota("/professores", "GET", HorarioRoutes::listarDoProfessor);
 
-        // Aluno agenda (tarefa 3.1), cancela e remarca (tarefa 4.1):
+        // Aluno agenda (3.1); participantes cancelam e remarcam suas aulas (4.1/4.2):
         // POST /aulas, /aulas/{id}/cancelar e /aulas/{id}/remarcar
-        rotaProtegida("/aulas", Usuarios.ALUNO, "POST", AulaRoutes::postar);
+        rotaProtegida("/aulas", null, "POST", AulaRoutes::postar);
 
         // Prazo mínimo para o aluno cancelar ou remarcar, definido pelo professor (tarefa 4.1)
         rotaProtegida("/professor/prazo-cancelamento", Usuarios.PROFESSOR, "GET", AulaRoutes::verPrazo);

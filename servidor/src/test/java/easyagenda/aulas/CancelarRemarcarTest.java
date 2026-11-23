@@ -172,12 +172,12 @@ class CancelarRemarcarTest {
     }
 
     @Test
-    @DisplayName("só o aluno da aula cancela, e aula que já começou não pode ser cancelada")
+    @DisplayName("somente participantes da aula alteram, e aula que já começou não pode ser cancelada")
     void regrasDoCancelamento() throws Exception {
         String aulaId = agendar(criarHorario(tokenAna, "10:00", "11:00"), tokenMarina);
 
         assertEquals(401, cancelar(aulaId, null).statusCode());
-        assertEquals(403, cancelar(aulaId, tokenAna).statusCode());     // professor não usa esta rota
+        assertEquals(404, cancelar(aulaId, tokenBruno).statusCode());   // outro professor
         assertEquals(404, cancelar(aulaId, tokenPedro).statusCode());   // aula de outro aluno
         assertEquals(404, cancelar("000000000000000000000000", tokenMarina).statusCode());
         assertEquals(404, cancelar("nao-e-um-id", tokenMarina).statusCode());
@@ -266,6 +266,31 @@ class CancelarRemarcarTest {
 
         assertEquals("agendada", aulaNoBanco(aulaId).getString("status"));
         assertEquals(1, Aulas.colecao().countDocuments());
+    }
+
+    @Test
+    @DisplayName("professor cancela sua aula e não agenda como aluno")
+    void professorCancela() throws Exception {
+        String horario = criarHorario(tokenAna, "10:00", "11:00");
+        String aula = agendar(horario, tokenMarina);
+        assertEquals(403, enviar("POST", "/aulas", "{\"horarioId\":\"" + horario + "\"}", tokenAna).statusCode());
+        assertEquals(200, cancelar(aula, tokenAna).statusCode());
+        assertEquals("cancelada", aulaNoBanco(aula).getString("status"));
+    }
+
+    @Test
+    @DisplayName("professor remarca preservando o aluno, respeita prazo e não altera aula alheia")
+    void professorRemarca() throws Exception {
+        String aula = agendar(criarHorario(tokenAna, "10:00", "11:00"), tokenMarina);
+        String novo = criarHorario(tokenAna, "14:00", "15:00");
+        assertEquals(404, remarcar(aula, novo, tokenBruno).statusCode());
+        HttpResponse<String> resposta = remarcar(aula, novo, tokenAna);
+        assertEquals(201, resposta.statusCode(), resposta.body());
+        assertEquals(idMarina, Document.parse(resposta.body()).getString("alunoId"));
+        assertEquals("cancelada", aulaNoBanco(aula).getString("status"));
+        String perto = aulaDaquiA(Duration.ofHours(5));
+        assertEquals(409, cancelar(perto, tokenAna).statusCode());
+        assertEquals(409, remarcar(perto, novo, tokenAna).statusCode());
     }
 
     // ----- ajudantes -----
