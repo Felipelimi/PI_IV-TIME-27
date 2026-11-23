@@ -32,12 +32,16 @@ public final class AulaRoutes {
     }
 
     /**
-     * POST em /aulas e nos caminhos abaixo dele (só aluno):
+     * POST em /aulas e nos caminhos abaixo dele (aluno agenda; aluno e professor alteram suas aulas):
      * /aulas, /aulas/{id}/cancelar e /aulas/{id}/remarcar.
      */
     public static void postar(HttpExchange exchange) throws IOException {
         String caminho = exchange.getRequestURI().getPath();
         if ("/aulas".equals(caminho)) {
+            if (!Usuarios.ALUNO.equals(Server.usuarioLogado(exchange).tipo())) {
+                Json.erro(exchange, 403, "acesso permitido apenas para aluno");
+                return;
+            }
             agendar(exchange);
             return;
         }
@@ -71,9 +75,9 @@ public final class AulaRoutes {
     }
 
     /**
-     * POST /aulas/{id}/cancelar  (só o aluno da aula)
+     * POST /aulas/{id}/cancelar  (aluno ou professor da aula)
      * 200 com a aula cancelada. O horário volta a ficar livre para outros alunos.
-     * 404 aula inexistente ou de outro aluno, 409 se a aula não está mais
+     * 404 aula inexistente ou de outro usuário, 409 se a aula não está mais
      * agendada, já começou ou se falta menos tempo que o prazo do professor.
      */
     private static void cancelar(HttpExchange exchange, String aulaId) throws IOException {
@@ -90,7 +94,7 @@ public final class AulaRoutes {
     }
 
     /**
-     * POST /aulas/{id}/remarcar  (só o aluno da aula)
+     * POST /aulas/{id}/remarcar  (aluno ou professor da aula)
      * Recebe: {"horarioId"} — outro horário livre do mesmo professor.
      * Agenda a aula nova (mesmas regras da 3.1) e cancela a antiga.
      * 201 com a aula nova e "remarcadaDe" (o id da aula antiga).
@@ -232,14 +236,15 @@ public final class AulaRoutes {
     }
 
     /**
-     * Busca a aula do aluno logado e confere se ela ainda pode ser cancelada ou
+     * Busca a aula do participante logado e confere se ela ainda pode ser cancelada ou
      * remarcada: está agendada, não começou e falta mais tempo que o prazo do
      * professor. Responde o erro e devolve null se não puder.
      */
     private static Document aulaQuePodeMudar(HttpExchange exchange, String aulaId, String acao) throws IOException {
         Document aula = ObjectId.isValid(aulaId) ? Aulas.buscarPorId(new ObjectId(aulaId)) : null;
-        String alunoId = Server.usuarioLogado(exchange).id();
-        if (aula == null || !aula.getObjectId("alunoId").toHexString().equals(alunoId)) {
+        var usuario = Server.usuarioLogado(exchange);
+        String campo = Usuarios.PROFESSOR.equals(usuario.tipo()) ? "professorId" : "alunoId";
+        if (aula == null || !aula.getObjectId(campo).toHexString().equals(usuario.id())) {
             Json.erro(exchange, 404, "aula não encontrada");
             return null;
         }
@@ -266,6 +271,7 @@ public final class AulaRoutes {
         List<Document> resposta = new ArrayList<>();
         for (Document aula : aulas) {
             resposta.add(Aulas.paraJson(aula, Aulas.horarioDaAula(aula))
+                    .append("prazoCancelamentoHoras", Usuarios.prazoCancelamentoHoras(aula.getObjectId("professorId")))
                     .append("professorNome", nomeDoUsuario(aula.getObjectId("professorId")))
                     .append("alunoNome", nomeDoUsuario(aula.getObjectId("alunoId"))));
         }

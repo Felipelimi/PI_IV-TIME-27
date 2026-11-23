@@ -6,6 +6,7 @@ import Cadastro from "./pages/Cadastro.jsx";
 import Horarios from "./pages/Horarios.jsx";
 import Agendamento from "./pages/Agendamento.jsx";
 import ProximasAulas from "./pages/ProximasAulas.jsx";
+import GerenciarAula from "./pages/GerenciarAula.jsx";
 import Historico from "./pages/Historico.jsx";
 
 // Páginas que aparecem com o menu em cima (só para quem está logado)
@@ -30,6 +31,7 @@ export default function App() {
       <Route path="/agendamento/:professorId" element={<RotaProtegida tipo="aluno"><ComMenu><Agendamento /></ComMenu></RotaProtegida>} />
       <Route path="/agendamento" element={<RotaProtegida tipo="aluno"><ComMenu><Agendamento /></ComMenu></RotaProtegida>} />
       <Route path="/proximas-aulas" element={<RotaProtegida><ComMenu><ProximasAulas /></ComMenu></RotaProtegida>} />
+      <Route path="/aulas/:aulaId/gerenciar" element={<RotaProtegida><ComMenu><GerenciarAula /></ComMenu></RotaProtegida>} />
       <Route path="/historico" element={<RotaProtegida><ComMenu><Historico /></ComMenu></RotaProtegida>} />
 
       <Route path="*" element={<p className="p-8">Página não encontrada.</p>} />
