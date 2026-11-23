@@ -270,3 +270,10 @@ não a executa.
   antigo. Instale o JDK 25 ou use a Opção 1.
 - **Mudanças no `init.js` não apareceram:** o script só roda com o banco vazio. Rode
   `docker compose down -v` e suba de novo.
+
+## Validação das semanas 2 e 3 (tarefa 3.4)
+
+O [roteiro e relatório de testes](docs/testes-semanas-2-e-3.md) registra os
+cenários executados, os resultados locais e a pendência de validação publicada.
+O roteiro de navegador pode ser reproduzido com `npm run test:e2e` na pasta
+`site/`, com o site e a API ativos conforme as instruções do relatório.
