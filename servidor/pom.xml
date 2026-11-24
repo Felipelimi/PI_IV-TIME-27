@@ -12,6 +12,9 @@
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Classe que o "mvn exec:java" roda. Padrão: a API HTTP.
+             Para o servidor de sockets: mvn exec:java -Dexec.mainClass=easyagenda.sockets.Servidor -->
+        <exec.mainClass>easyagenda.Main</exec.mainClass>
     </properties>
 
     <dependencies>
@@ -64,9 +67,6 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
-                <configuration>
-                    <mainClass>easyagenda.Main</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>
