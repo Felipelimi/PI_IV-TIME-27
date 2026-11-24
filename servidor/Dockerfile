@@ -12,5 +12,11 @@ FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/target/easyagenda-server-*.jar app.jar
 COPY --from=build /app/target/lib ./lib
+COPY iniciar.sh .
+# Dois processos Java dividem a memória: no plano grátis do Render são 512 MB no total
+ENV MEMORIA_API="-Xmx224m" \
+    MEMORIA_SOCKETS="-Xmx96m" \
+    SOCKETS_PORTA=3000
+# 8080: API HTTP (pública). 3000: servidor de sockets, só dentro do container.
 EXPOSE 8080
-CMD ["java", "-cp", "app.jar:lib/*", "easyagenda.Main"]
+CMD ["bash", "iniciar.sh"]

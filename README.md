@@ -3,6 +3,8 @@
 Servidor do EasyAgenda em **Java 25 LTS**, usando:
 
 - `HttpServer` do próprio JDK para as rotas HTTP
+- **Servidor de sockets** no modelo da disciplina (`ServerSocket` + `Comunicado` serializado) para
+  agendar, cancelar e remarcar aulas
 - Driver oficial do **MongoDB** (`mongodb-driver-sync`)
 - **JUnit 5** para os testes
 - **Maven** para build e dependências
@@ -22,9 +24,48 @@ servidor/
     Database.java           # conexão com o MongoDB
     Server.java             # servidor HTTP e rotas
     lembretes/              # lembrete por e-mail das aulas (rotina automática + envio SMTP)
+    sockets/                # servidor de sockets (agendar, cancelar e remarcar aulas)
+  iniciar.sh                # no Docker, sobe a API e o servidor de sockets juntos
   src/test/java/easyagenda/
     PingTest.java           # teste modelo
 ```
+
+## Arquitetura: API HTTP + servidor de sockets
+
+O servidor é formado por **dois processos Java**:
+
+```
+Site (React) --HTTP/JSON--> API HTTP (easyagenda.Main, porta 8080)
+                                |  agendar, cancelar e remarcar
+                                v
+                  Socket + Comunicados serializados
+                                |
+                                v
+            Servidor de sockets (easyagenda.sockets.Servidor, porta 3000) --> MongoDB
+```
+
+- **API HTTP** (`easyagenda.Main`): atende o site, confere o login (token) e cuida de cadastro,
+  horários, listagens e lembretes. Para **agendar, cancelar e remarcar**, ela monta um
+  `Comunicado` e o repassa ao servidor de sockets.
+- **Servidor de sockets** (`easyagenda.sockets.Servidor`): segue a estrutura ensinada na disciplina.
+
+| Classe | Papel |
+|---|---|
+| `Servidor` | Ponto de entrada: lê a porta, sobe a `AceitadoraDeConexao` e espera o comando `desativar` no teclado |
+| `AceitadoraDeConexao` (thread) | Fica no `accept()` e cria uma `SupervisoraDeConexao` para cada conexão |
+| `SupervisoraDeConexao` (thread) | Uma por cliente: lê os pedidos e devolve um `Resultado` para cada um |
+| `Parceiro` | A outra ponta da conexão (`receba`, `envie`, `espie`, `adeus`) |
+| `Comunicado` e subclasses | O que trafega no socket: `PedidoDeAgendamento`, `PedidoDeCancelamento`, `PedidoDeRemarcacao`, `Resultado`, `PedidoParaSair`, `ComunicadoDeDesligamento` |
+| `OperacoesDeAula` | As regras de agendar, cancelar e remarcar, chamadas pela `SupervisoraDeConexao` |
+| `ClienteDeSockets` | Lado cliente, usado pela API: uma conexão por pedido |
+| `Teclado` | Lê o comando `desativar` |
+
+O `Resultado` traz o código no mesmo padrão do HTTP (201, 404, 409...) e o corpo em JSON, e a API
+só repassa ao site o que recebeu. Se o servidor de sockets estiver fora do ar, essas três rotas
+respondem **503** e o resto da API continua funcionando.
+
+Por segurança, o servidor de sockets só aceita conexões da própria máquina (`localhost`) e só
+desserializa `Comunicado`s do pacote `easyagenda.sockets`.
 
 ## Banco de dados: local x Atlas
 
@@ -68,7 +109,9 @@ docker compose up --build
 ```
 
 Isso sobe o MongoDB 7 local (porta `27017`, já com a estrutura do banco) e o servidor (porta
-`8080`). O servidor espera o banco ficar pronto antes de iniciar.
+`8080`). O servidor espera o banco ficar pronto antes de iniciar. O container do servidor roda os
+dois processos (API e servidor de sockets) pelo [iniciar.sh](servidor/iniciar.sh). Sem teclado no
+container, o `desativar` é feito pelo `docker compose stop`, que também avisa os conectados.
 
 Comandos úteis:
 
@@ -122,14 +165,25 @@ Melhor para o dia a dia: recompila mais rápido e permite depurar com breakpoint
   > O arquivo `.env` só é lido pelo Docker Compose; o Maven não o lê. Nesta opção, use a
   > variável de ambiente.
 
-**2. Rode o servidor**
+**2. Rode o servidor de sockets** (num terminal)
+
+```bash
+cd servidor
+mvn compile exec:java -Dexec.mainClass=easyagenda.sockets.Servidor
+```
+
+Quando aparecer `Servidor de sockets ativo na porta 3000`, ele está no ar. Para desligá-lo, digite
+`desativar` nesse terminal.
+
+**3. Rode a API HTTP** (em outro terminal)
 
 ```bash
 cd servidor
 mvn compile exec:java
 ```
 
-Quando aparecer `Servidor rodando em http://localhost:8080`, ele está no ar.
+Quando aparecer `Servidor rodando em http://localhost:8080`, ela está no ar. Sem o servidor de
+sockets, a API sobe normalmente, mas agendar, cancelar e remarcar respondem 503.
 
 ## Testando se está no ar
 
@@ -150,6 +204,9 @@ Variáveis de ambiente (todas opcionais):
 | `PORT`        | `8080`                      | Porta do servidor                 |
 | `MONGODB_URI` | `mongodb://localhost:27017` | Endereço do MongoDB (local/Atlas) |
 | `MONGODB_DB`  | `easyagenda`                | Nome do banco                     |
+| `SOCKETS_PORTA` | `3000`                    | Porta do servidor de sockets (lida pelos dois processos) |
+| `SOCKETS_HOST`  | `localhost`               | Onde a API procura o servidor de sockets |
+| `MEMORIA_API` / `MEMORIA_SOCKETS` | `-Xmx224m` / `-Xmx96m` | Só no Docker: memória de cada processo Java (cabem nos 512 MB do Render) |
 
 - **Opção 1 (Docker):** coloque as variáveis no arquivo `.env` da raiz.
 - **Opção 2 (sem Docker):** defina-as no terminal (`export` / `$env:`).
@@ -242,6 +299,12 @@ docker compose up -d mongo
 cd servidor
 mvn test
 ```
+
+Os testes de aula sobem o servidor de sockets dentro do próprio teste, numa porta livre
+([ServidorDeSocketsDeTeste](servidor/src/test/java/easyagenda/sockets/ServidorDeSocketsDeTeste.java)),
+então não é preciso rodá-lo à parte. O protocolo em si (Comunicados, lista de conectados,
+`desativar`) é testado em
+[ServidorDeSocketsTest](servidor/src/test/java/easyagenda/sockets/ServidorDeSocketsTest.java).
 
 O teste modelo é [PingTest.java](servidor/src/test/java/easyagenda/PingTest.java): copie-o para
 criar novos testes. O nome da classe precisa terminar em `Test` (ex.: `AulaTest`), senão o Maven
