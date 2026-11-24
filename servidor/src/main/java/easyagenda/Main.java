@@ -4,6 +4,7 @@ import easyagenda.aulas.Aulas;
 import easyagenda.auth.Usuarios;
 import easyagenda.lembretes.EnvioDeEmail;
 import easyagenda.lembretes.Lembretes;
+import easyagenda.sockets.ClienteDeSockets;
 
 import java.time.Duration;
 
@@ -24,6 +25,8 @@ public class Main {
         Server server = new Server(port);
         server.start();
         System.out.println("Servidor rodando em http://localhost:" + server.getPort());
+        System.out.println("Agendar, cancelar e remarcar vão para o servidor de sockets em "
+                + ClienteDeSockets.endereco() + " (easyagenda.sockets.Servidor).");
 
         // Lembrete por e-mail das aulas (tarefa 3.3)
         Duration antecedencia = Duration.ofHours(Long.parseLong(env("LEMBRETE_ANTECEDENCIA_HORAS", "24")));

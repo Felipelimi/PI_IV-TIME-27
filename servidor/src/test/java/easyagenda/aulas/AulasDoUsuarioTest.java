@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import easyagenda.Database;
 import easyagenda.Server;
+import easyagenda.sockets.ServidorDeSocketsDeTeste;
 import easyagenda.auth.Usuarios;
 import easyagenda.horarios.Horarios;
 
@@ -65,6 +66,7 @@ class AulasDoUsuarioTest {
         Usuarios.colecao().drop();
         Usuarios.garantirIndices();
 
+        ServidorDeSocketsDeTeste.subir(); // agendar/cancelar/remarcar passam por ele
         server = new Server(0);
         server.start();
         base = "http://localhost:" + server.getPort();

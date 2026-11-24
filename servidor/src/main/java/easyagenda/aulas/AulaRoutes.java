@@ -1,27 +1,34 @@
 package easyagenda.aulas;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-import com.mongodb.ErrorCategory;
-import com.mongodb.MongoWriteException;
 import com.mongodb.client.model.Filters;
 import com.sun.net.httpserver.HttpExchange;
 
 import easyagenda.Json;
 import easyagenda.Server;
+import easyagenda.auth.Auth;
 import easyagenda.auth.Usuarios;
-import easyagenda.horarios.Horarios;
+import easyagenda.sockets.ClienteDeSockets;
+import easyagenda.sockets.Comunicado;
+import easyagenda.sockets.PedidoDeAgendamento;
+import easyagenda.sockets.PedidoDeCancelamento;
+import easyagenda.sockets.PedidoDeRemarcacao;
+import easyagenda.sockets.Resultado;
 
 /**
  * Rotas das aulas: agendamento (tarefa 3.1), cancelar e remarcar (tarefa 4.1),
  * próximas aulas e histórico (tarefa 4.3).
+ *
+ * Agendar, cancelar e remarcar são feitos pelo servidor de sockets
+ * (easyagenda.sockets.Servidor): aqui a API só confere o login, monta o
+ * pedido e devolve ao site o Resultado que voltou. As regras estão em
+ * easyagenda.sockets.OperacoesDeAula.
  */
 public final class AulaRoutes {
 
@@ -63,15 +70,8 @@ public final class AulaRoutes {
      * 404 horário inexistente, 409 "horário indisponível" se alguém marcou antes.
      */
     private static void agendar(HttpExchange exchange) throws IOException {
-        Document horario = horarioDoCorpo(exchange);
-        if (horario == null) {
-            return; // horarioDoCorpo já respondeu o erro
-        }
-        ObjectId alunoId = new ObjectId(Server.usuarioLogado(exchange).id());
-        Document aula = marcar(exchange, horario, alunoId);
-        if (aula != null) {
-            Json.enviar(exchange, 201, Aulas.paraJson(aula, horario));
-        }
+        String alunoId = Server.usuarioLogado(exchange).id();
+        repassar(exchange, new PedidoDeAgendamento(horarioIdDoCorpo(exchange), alunoId));
     }
 
     /**
@@ -81,16 +81,8 @@ public final class AulaRoutes {
      * agendada, já começou ou se falta menos tempo que o prazo do professor.
      */
     private static void cancelar(HttpExchange exchange, String aulaId) throws IOException {
-        Document aula = aulaQuePodeMudar(exchange, aulaId, "cancelar");
-        if (aula == null) {
-            return;
-        }
-        if (!Aulas.cancelar(aula.getObjectId("_id"))) {
-            Json.erro(exchange, 409, "essa aula não está mais agendada");
-            return;
-        }
-        Document cancelada = Aulas.buscarPorId(aula.getObjectId("_id"));
-        Json.enviar(exchange, 200, Aulas.paraJson(cancelada, Aulas.horarioDaAula(cancelada)));
+        Auth.Usuario usuario = Server.usuarioLogado(exchange);
+        repassar(exchange, new PedidoDeCancelamento(aulaId, usuario.id(), usuario.tipo()));
     }
 
     /**
@@ -101,36 +93,8 @@ public final class AulaRoutes {
      * Se o horário novo estiver ocupado (409), a aula antiga continua marcada.
      */
     private static void remarcar(HttpExchange exchange, String aulaId) throws IOException {
-        Document antiga = aulaQuePodeMudar(exchange, aulaId, "remarcar");
-        if (antiga == null) {
-            return;
-        }
-        Document horario = horarioDoCorpo(exchange);
-        if (horario == null) {
-            return;
-        }
-        if (!horario.getObjectId("professorId").equals(antiga.getObjectId("professorId"))) {
-            Json.erro(exchange, 400, "escolha um horário do mesmo professor da aula");
-            return;
-        }
-        if (Horarios.inicio(horario).equals(antiga.getDate("dataHora"))) {
-            Json.erro(exchange, 400, "esse já é o horário da sua aula");
-            return;
-        }
-
-        // Primeiro marca a nova: se o horário estiver ocupado, nada muda na antiga.
-        Document nova = marcar(exchange, horario, antiga.getObjectId("alunoId"));
-        if (nova == null) {
-            return;
-        }
-        if (!Aulas.cancelar(antiga.getObjectId("_id"))) {
-            // A antiga foi cancelada por outra requisição no meio do caminho: desfaz a nova.
-            Aulas.apagar(nova.getObjectId("_id"));
-            Json.erro(exchange, 409, "essa aula não está mais agendada");
-            return;
-        }
-        Json.enviar(exchange, 201, Aulas.paraJson(nova, horario)
-                .append("remarcadaDe", antiga.getObjectId("_id").toHexString()));
+        Auth.Usuario usuario = Server.usuarioLogado(exchange);
+        repassar(exchange, new PedidoDeRemarcacao(aulaId, horarioIdDoCorpo(exchange), usuario.id(), usuario.tipo()));
     }
 
     /**
@@ -195,75 +159,27 @@ public final class AulaRoutes {
 
     // ----- ajudantes -----
 
-    /**
-     * Lê {"horarioId"} do corpo e confere se o horário existe e ainda não
-     * passou (regras da 3.1). Responde o erro e devolve null se não der.
-     */
-    private static Document horarioDoCorpo(HttpExchange exchange) throws IOException {
+    /** O {"horarioId"} do corpo, ou null se não veio (o servidor de sockets responde o erro). */
+    private static String horarioIdDoCorpo(HttpExchange exchange) throws IOException {
         Document corpo = Json.lerCorpo(exchange);
-        String horarioId = corpo == null ? null : Json.texto(corpo, "horarioId");
-        if (horarioId == null) {
-            Json.erro(exchange, 400, "envie um JSON com horarioId");
-            return null;
-        }
-        Document horario = ObjectId.isValid(horarioId) ? Horarios.buscarPorId(new ObjectId(horarioId)) : null;
-        if (horario == null) {
-            Json.erro(exchange, 404, "horário não encontrado");
-            return null;
-        }
-        if (Horarios.jaPassou(horario)) {
-            Json.erro(exchange, 400, "esse horário já passou");
-            return null;
-        }
-        return horario;
+        return corpo == null ? null : Json.texto(corpo, "horarioId");
     }
 
     /**
-     * Marca a aula no horário. Não consultamos antes se está livre: o índice
-     * único do banco é quem garante, inclusive quando dois alunos confirmam ao
-     * mesmo tempo. Responde 409 e devolve null se o horário já tem aula.
+     * Manda o pedido ao servidor de sockets e devolve ao site o Resultado
+     * (mesmo código e mesmo JSON). 503 se o servidor de sockets não responder.
      */
-    private static Document marcar(HttpExchange exchange, Document horario, ObjectId alunoId) throws IOException {
+    private static void repassar(HttpExchange exchange, Comunicado pedido) throws IOException {
+        Resultado resultado;
         try {
-            return Aulas.agendar(horario, alunoId);
-        } catch (MongoWriteException e) {
-            if (e.getError().getCategory() == ErrorCategory.DUPLICATE_KEY) {
-                Json.erro(exchange, 409, "horário indisponível");
-                return null;
-            }
-            throw e;
+            resultado = ClienteDeSockets.pedir(pedido);
+        } catch (Exception erro) {
+            System.err.println("[sockets] sem resposta de " + ClienteDeSockets.endereco()
+                    + " para \"" + pedido + "\": " + erro.getMessage());
+            Json.erro(exchange, 503, "o agendamento está indisponível agora; tente de novo em instantes");
+            return;
         }
-    }
-
-    /**
-     * Busca a aula do participante logado e confere se ela ainda pode ser cancelada ou
-     * remarcada: está agendada, não começou e falta mais tempo que o prazo do
-     * professor. Responde o erro e devolve null se não puder.
-     */
-    private static Document aulaQuePodeMudar(HttpExchange exchange, String aulaId, String acao) throws IOException {
-        Document aula = ObjectId.isValid(aulaId) ? Aulas.buscarPorId(new ObjectId(aulaId)) : null;
-        var usuario = Server.usuarioLogado(exchange);
-        String campo = Usuarios.PROFESSOR.equals(usuario.tipo()) ? "professorId" : "alunoId";
-        if (aula == null || !aula.getObjectId(campo).toHexString().equals(usuario.id())) {
-            Json.erro(exchange, 404, "aula não encontrada");
-            return null;
-        }
-        if (!Aulas.AGENDADA.equals(aula.getString("status"))) {
-            Json.erro(exchange, 409, "essa aula não está mais agendada");
-            return null;
-        }
-        Duration falta = Duration.between(Instant.now(), aula.getDate("dataHora").toInstant());
-        if (!falta.isPositive()) {
-            Json.erro(exchange, 409, "essa aula já começou");
-            return null;
-        }
-        int prazo = Usuarios.prazoCancelamentoHoras(aula.getObjectId("professorId"));
-        if (falta.compareTo(Duration.ofHours(prazo)) <= 0) {
-            Json.erro(exchange, 409, "não dá mais para " + acao + ": o professor pede pelo menos "
-                    + prazo + " h de antecedência");
-            return null;
-        }
-        return aula;
+        Json.enviarTexto(exchange, resultado.getCodigo(), resultado.getJson());
     }
 
     /** Aulas no formato do site, com o nome do professor e do aluno para a tela mostrar. */

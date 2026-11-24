@@ -46,7 +46,12 @@ public final class Json {
     }
 
     public static void enviar(HttpExchange exchange, int status, Document corpo) throws IOException {
-        byte[] bytes = corpo.toJson().getBytes(StandardCharsets.UTF_8);
+        enviarTexto(exchange, status, corpo.toJson());
+    }
+
+    /** Envia um JSON que já está pronto em texto (ex.: o que veio do servidor de sockets). */
+    public static void enviarTexto(HttpExchange exchange, int status, String json) throws IOException {
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         exchange.sendResponseHeaders(status, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
